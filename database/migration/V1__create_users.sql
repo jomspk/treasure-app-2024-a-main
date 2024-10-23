@@ -1,0 +1,6 @@
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    firebase_uid VARCHAR NOT NULL UNIQUE,
+    name VARCHAR,
+    photo_url VARCHAR
+);

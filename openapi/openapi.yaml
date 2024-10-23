@@ -1,0 +1,433 @@
+openapi: 3.1.0
+info:
+  title: Treasure2024 API
+  description: Treasure2024で使用するbase-appのAPI
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: develop
+    variables:
+      host:
+        default: localhost
+      port:
+        default: "8000"
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    DocVector:
+      type: array
+      items:
+        type: number
+        format: float
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        summary:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        finishedAt:
+          type: string
+          format: date-time
+        docVector:
+          $ref: "#/components/schemas/DocVector"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
+        topics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Topic"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionComment"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - summary
+        - userId
+        - docVector
+        - tags
+        - topics
+        - comments
+        - createdAt
+    Topic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        questionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        isDefaultTopic:
+          type: boolean
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicComment"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - description
+        - isDefaultTopic
+        - comments
+        - createdAt
+    QuestionComment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        questionId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - suggest
+            - question
+            - answer
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - questionId
+        - userId
+        - type
+        - content
+        - createdAt
+    TopicComment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        topicId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - suggest
+            - question
+            - answer
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - topicId
+        - userId
+        - type
+        - content
+        - createdAt
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+        - id
+        - name
+    OriginalUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        photoUrl:
+          type: string
+      required:
+        - id
+        - name
+        - photoUrl
+    QuestionResponse:
+      type: object
+      properties:
+        questionId:
+          type: string
+          format: uuid
+        status:
+          type: number
+
+security:
+  - BearerAuth: []
+
+paths:
+  /healthcheck:
+    get:
+      summary: ヘルスチェック用エンドポイント
+      security: []
+      responses:
+        "200":
+          description: 情報の取得成功
+          content:
+            text/plain:
+              schema:
+                type: string
+  /users/me/register:
+    post:
+      summary: 新規ユーザ作成
+      responses:
+        "201":
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OriginalUser"
+  /users/me:
+    get:
+      summary: ログインしているアカウントに関する情報
+      responses:
+        "200":
+          description: 情報の取得成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OriginalUser"
+
+  # 新しく作ったやつ
+  /questions:
+    post:
+      summary: 質問作成
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                tags:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Tag"
+                topics:
+                  type: array
+                  items:
+                    type: object
+                    allOf: # Topicの一部のプロパティだけを追加できるみたい
+                      - properties:
+                          title:
+                            type: string
+                          description:
+                            type: string
+                          isDefaultTopic:
+                            type: boolean
+              required:
+                - tags
+                - userId
+                - topics
+      responses:
+        "201":
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionResponse"
+
+  /questions/{questionId}:
+    get:
+      summary: 質問取得
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  /questions/{questionId}/resolve:
+    post:
+      summary: 質問解決
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: 解決成功
+
+  /questions/{questionId}/comments:
+    post:
+      summary: Questionコメント作成
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum:
+                    - suggest
+                    - question
+                    - answer
+                content:
+                  type: string
+              required:
+                - userId
+                - type
+                - content
+      responses:
+        "201":
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionComment"
+
+  /topics/{topicId}/comments:
+    post:
+      summary: Topicコメント作成
+      parameters:
+        - name: topicId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum:
+                    - suggest
+                    - question
+                    - answer
+                content:
+                  type: string
+              required:
+                - userId
+                - type
+                - content
+      responses:
+        "201":
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicComment"
+
+  /tags:
+    get:
+      summary: タグ一覧取得
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
+    post:
+      summary: タグ作成
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+                - name
+      responses:
+        "201":
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+
+  /recommend:
+    post:
+      summary: 似たような質問にされていた追加質問コメントを推薦させる
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                docString:
+                  type: string
+              required:
+                - docString
+      responses:
+        "201":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string

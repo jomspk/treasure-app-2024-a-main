@@ -1,0 +1,66 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "<TEAM_NAME>-backend",
+      "image": "",
+      "cpu": 512,
+      "memory": 1024,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "<TEAM_NAME>-backend",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "ecs-backend"
+        }
+      },
+      "secrets": [
+        {
+          "name": "GOOGLE_SERVICE_ACCOUNT_KEY_JSON_BASE64",
+          "valueFrom": "/firebase/google_service_account_key_json_base64"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "valueFrom": "/rds/host"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "valueFrom": "/rds/name"
+        },
+        {
+          "name": "DATABASE_USER",
+          "valueFrom": "/rds/user"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "valueFrom": "/rds/password"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "valueFrom": "/rds/port"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "/openai/apikey"
+        }
+      ]
+    }
+  ],
+  "family": "x-backend-task",
+  "taskRoleArn": "arn:aws:iam::<GROUP_AWS_ACCOUNT_ID>:role/<TEAM_NAME>-backend-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::<GROUP_AWS_ACCOUNT_ID>:role/<TEAM_NAME>-backend-ecs-task-exec-role",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  }
+}

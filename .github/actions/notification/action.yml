@@ -1,0 +1,17 @@
+name: Notify Slack
+description: Notify Slack
+
+inputs:
+  slack_webhook_url:
+    required: true
+    description: Slack webhook URL
+
+runs:
+  using: "composite"
+  steps:
+    - uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        fields: repo,commit,took,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}

@@ -1,0 +1,4 @@
+google_service_account_key.json
+*.env
+*.log
+.node-version

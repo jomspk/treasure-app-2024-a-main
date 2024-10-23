@@ -1,0 +1,54 @@
+name: build
+description: Build and push Docker image
+
+inputs:
+  image_tag:
+    required: true
+    description: image tag
+  repo_name:
+    required: true
+    description: ECR repo name
+  oidc_role_arn:
+    required: true
+    description: OIDC role arn
+  docker_context:
+    required: true
+    description: Docker build context
+  docker_target:
+    required: true
+    description: Docker build target
+outputs:
+  ecr_registry:
+    value: ${{ steps.login-ecr.outputs.registry }}
+    description: ECR registry URL
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.oidc_role_arn }}
+        aws-region: ap-northeast-1
+
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
+      id: login-ecr
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      id: buildx
+
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ inputs.docker_context }}
+        target: ${{ inputs.docker_target }}
+        push: true
+        platform: linux/amd64
+
+        tags: |
+          ${{ steps.login-ecr.outputs.registry }}/${{ inputs.repo_name }}:${{ inputs.image_tag }}
+          ${{ steps.login-ecr.outputs.registry }}/${{ inputs.repo_name }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

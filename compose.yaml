@@ -1,0 +1,45 @@
+services:
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: treasure-app-db
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=p@ssword
+      - POSTGRES_DB=treasure_app
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - data-volume:/var/lib/postgresql/data
+      - data-volume:/var/log
+      # NOTE: 更新が遅いので :cached をつける
+      # REF: https://docker-docs.uclv.cu/docker-for-mac/osxfs-caching/
+      - ./database/seed:/database/seed:cached
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d treasure_app"]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+
+  migration:
+    image: flyway/flyway:10
+    volumes:
+      - ./database/migration:/flyway/sql
+    depends_on:
+      db:
+        condition: service_healthy
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    container_name: treasure-swagger-ui
+    environment:
+      - SWAGGER_URL=./swagger.yaml
+      - SWAGGER_JSON=/openapi/openapi.yaml
+    ports:
+      - 8080:8080
+    volumes:
+      - ./openapi/:/openapi
+
+volumes:
+  data-volume:
+  node_modules:

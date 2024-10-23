@@ -1,0 +1,6 @@
+*.log
+dist
+.vscode/*
+*.json
+*.md
+src/openapi/schema.ts

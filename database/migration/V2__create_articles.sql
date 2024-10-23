@@ -1,0 +1,7 @@
+CREATE TABLE articles (
+    id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    title VARCHAR NOT NULL DEFAULT '',
+    content VARCHAR NOT NULL DEFAULT '',
+    author_id INTEGER NOT NULL,
+    FOREIGN KEY (author_id) REFERENCES users(id)
+);

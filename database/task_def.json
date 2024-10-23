@@ -1,0 +1,43 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "<TEAM_NAME>-flyway",
+      "image": "",
+      "cpu": 512,
+      "memory": 1024,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "<TEAM_NAME>-flyway",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "ecs-flyway"
+        }
+      },
+      "secrets": [
+        {
+          "name": "FLYWAY_URL",
+          "valueFrom": "/rds/url"
+        },
+        {
+          "name": "FLYWAY_USER",
+          "valueFrom": "/rds/user"
+        },
+        {
+          "name": "FLYWAY_PASSWORD",
+          "valueFrom": "/rds/password"
+        }
+      ]
+    }
+  ],
+  "family": "<TEAM_NAME>-flyway-task",
+  "taskRoleArn": "arn:aws:iam::<GROUP_AWS_ACCOUNT_ID>:role/<TEAM_NAME>-flyway-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::<GROUP_AWS_ACCOUNT_ID>:role/<TEAM_NAME>-flyway-ecs-task-exec-role",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  }
+}

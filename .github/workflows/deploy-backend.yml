@@ -1,0 +1,70 @@
+name: deploy backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+      - ".github/actions/build/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+  OIDC_ROLE_ARN: "arn:aws:iam::${{ secrets.GROUP_AWS_ACCOUNT_ID }}:role/${{ vars.TEAM_NAME }}-oidc-github"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        id: build
+        uses: ./.github/actions/build
+        with:
+          repo_name: ${{ vars.TEAM_NAME }}-backend
+          image_tag: ${{ env.IMAGE_TAG }}
+          oidc_role_arn: ${{ env.OIDC_ROLE_ARN }}
+          docker_context: backend
+          docker_target: runner
+      - name: Replace image placeholder
+        run: |
+          sed -i 's/<TEAM_NAME>/${{ vars.TEAM_NAME }}/g' backend/task_def.json
+          sed -i 's/<GROUP_AWS_ACCOUNT_ID>/${{ secrets.GROUP_AWS_ACCOUNT_ID }}/g' backend/task_def.json
+          sed -i 's/<TEAM_NAME>/${{ vars.TEAM_NAME }}/g' backend/appspec.yml
+      - name: render new task definition
+        id: render-container
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: backend/task_def.json
+          container-name: ${{ vars.TEAM_NAME }}-backend
+          image: ${{ steps.build.outputs.ecr_registry }}/${{ vars.TEAM_NAME }}-backend:${{ env.IMAGE_TAG }}
+      - name: Deploy to Amazon ECS
+        id: ecs-deploy
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-container.outputs.task-definition }}
+          service: ${{ vars.ECS_SERVICE_NAME }}
+          cluster: ${{ vars.CLUSTER_NAME }}
+          wait-for-service-stability: true
+          codedeploy-appspec: backend/appspec.yml
+          codedeploy-application: ${{ vars.TEAM_NAME }}-codedeploy
+          codedeploy-deployment-group: ${{ vars.TEAM_NAME }}-codedeploy-group
+          wait-for-minutes: 10
+      - name: Rollback on Failure
+        if: failure()
+        run: aws deploy stop-deployment --deployment-id ${{ steps.ecs-deploy.outputs.codedeploy-deployment-id }} --auto-rollback-enabled
+      - uses: ./.github/actions/notification
+        with:
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: always()
